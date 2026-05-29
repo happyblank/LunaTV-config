@@ -4,6 +4,8 @@
 
 支持将 API 请求通过 Worker 转发，并自动为 JSON 配置中的 `api` 字段添加/替换前缀。
 
+支持配置过滤的关键字，可以过滤json配置中的 _comment name 两个字段，输出订阅时将过滤掉满条条件的站点。
+
 同时支持生成 **Base58 编码的订阅格式**，并提供**多种配置源选择**，方便在外部应用中快速使用。
 
 ---
@@ -59,8 +61,11 @@ HTML 页面会根据当前域名自动生成示例链接，无需手动修改
 2. 新建一个 **Workers & Pages → Worker**
 3. 将 `worker.js` 代码粘贴到编辑器中
 4. 保存并部署
-5. 在 Cloudflare Workers KV 中创建命名空间：名称：CONFIG_KV,绑定变量名：CONFIG_KV
-6. 绑定自定义域名（可选）
+5. 在 Cloudflare Workers KV 中创建命名空间：名称：CONFIG_KV,绑定变量名：CONFIG_KV；名称：KV，绑定变量名：KV
+6. 在绑定的 KV 空间中添加两个 Key：
+    1. FILTER_COMMENT: 输入你想过滤的备注关键字，多个用英文逗号隔开（如：暂不支持,失效）。
+    2. FILTER_NAME: 输入你想过滤的名称关键字（如：广告,福利）
+7. 绑定自定义域名（可选）
 
 ---
 

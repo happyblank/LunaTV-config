@@ -22,7 +22,7 @@ const EXCLUDE_HEADERS = new Set([
   'content-encoding', 'content-length', 'transfer-encoding',
   'connection', 'keep-alive', 'set-cookie', 'set-cookie2'
 ])
-
+// 原项目地址对源进行了定期检测，并可能在comment增加了可用备注，所以暂时仍以原项目地址作为数据源。
 const JSON_SOURCES = {
   'jin18': 'https://raw.githubusercontent.com/hafrey1/LunaTV-config/refs/heads/main/jin18.json',
   'jingjian': 'https://raw.githubusercontent.com/hafrey1/LunaTV-config/refs/heads/main/jingjian.json',
@@ -83,6 +83,36 @@ function addOrReplacePrefix(obj, newPrefix) {
     }
   }
   return newObj
+}
+
+// 新增：基于 KV 关键字过滤 api_site 实体
+async function applyFilters(data) {
+  if (!data || typeof data !== 'object' || !data.api_site) return data
+
+  const kvAvailable = typeof KV !== 'undefined' && KV && typeof KV.get === 'function'
+  if (!kvAvailable) return data
+
+  // 从 KV 获取过滤关键字（假设为逗号分隔的字符串，例如 "搜索,测试"）
+  const [commentFilter, nameFilter] = await Promise.all([
+    KV.get('FILTER_COMMENT'),
+    KV.get('FILTER_NAME')
+  ])
+
+  const commentKeywords = commentFilter ? commentFilter.split(',').map(k => k.trim()).filter(k => k) : []
+  const nameKeywords = nameFilter ? nameFilter.split(',').map(k => k.trim()).filter(k => k) : []
+
+  if (commentKeywords.length === 0 && nameKeywords.length === 0) return data
+
+  const newApiSite = {}
+  for (const [id, site] of Object.entries(data.api_site)) {
+    const nameMatch = site.name && nameKeywords.some(kw => site.name.includes(kw))
+    const commentMatch = site._comment && commentKeywords.some(kw => site._comment.includes(kw))
+
+    if (!nameMatch && !commentMatch) {
+      newApiSite[id] = site
+    }
+  }
+  return { ...data, api_site: newApiSite }
 }
 
 // ---------- 安全版：KV 缓存 ----------
@@ -225,8 +255,11 @@ async function handleFormatRequest(formatParam, sourceParam, prefixParam, defaul
     }
 
     const selectedSource = JSON_SOURCES[sourceParam] || JSON_SOURCES['full']
-    const data = await getCachedJSON(selectedSource)
+    let data = await getCachedJSON(selectedSource)
     
+    // 应用 KV 过滤逻辑
+    data = await applyFilters(data)
+
     const newData = config.proxy
       ? addOrReplacePrefix(data, prefixParam || defaultPrefix)
       : data

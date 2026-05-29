@@ -260,6 +260,15 @@ async function handleFormatRequest(formatParam, sourceParam, prefixParam, defaul
     // 应用 KV 过滤逻辑
     data = await applyFilters(data)
 
+    // 标记成人内容：如果 key 或 name 包含 🔞，则增加 adult: true
+    if (data && data.api_site) {
+      for (const [key, site] of Object.entries(data.api_site)) {
+        if (key.includes('🔞') || (site.name && site.name.includes('🔞'))) {
+          site.adult = true
+        }
+      }
+    }
+
     const newData = config.proxy
       ? addOrReplacePrefix(data, prefixParam || defaultPrefix)
       : data
